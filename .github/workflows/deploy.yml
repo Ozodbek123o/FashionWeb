@@ -1,4 +1,4 @@
-name: FashionWeb CI/CD Deploy Test
+name: FashionWeb Production CD Deploy
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
       - name: Checkout repository code
         uses: actions/checkout@v4
 
-      - name: Test SSH Connection to AWS EC2
+      - name: Deploy Production to AWS EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -20,8 +20,29 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: 22
           script: |
-            echo "Ulanish muvaffaqiyatli bajardi!"
-            echo "Server operatsion tizimi haqida ma'lumot:"
-            uname -a
-            echo "Hozirgi vaqt va sana:"
-            date
+            # Loyiha papkasiga kirish
+            cd ~/FashionWeb
+
+            # Mahalliy o'zgarishlarni bekor qilib, GitHub'dan eng yangi kodni tortish
+            git reset --hard HEAD
+            git pull origin main
+
+            # 1. Backend-ni yangilash va qayta ishga tushirish
+            echo "Backend sozlanmoqda..."
+            cd backend
+            npm install --production
+            # Agar Prisma ishlatsangiz, pastdagi qatorni ochib yuborishingiz mumkin:
+            # npx prisma migrate deploy
+            pm2 restart fashion-backend || pm2 start server.js --name "fashion-backend"
+
+            # 2. Frontend-ni yangilash va Build qilish
+            echo "Frontend sozlanmoqda..."
+            cd ../frontend
+            npm install
+            npm run build
+
+            # Agar frontend Nginx yoki Nginx static folder orqali xizmat qarayotgan bo'lsa,
+            # build bo'lgan fayllarni Nginx papkasiga ko'chirish:
+            # sudo cp -r dist/* /var/www/fashionweb/
+
+            echo "🎉 Deploy jarayoni muvaffaqiyatli yakunlandi!"
