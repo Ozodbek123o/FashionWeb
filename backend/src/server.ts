@@ -32,18 +32,24 @@ app.get(
 			// Check DB connection
 			await prisma.$queryRaw`SELECT 1`
 			res.status(200).json({
-				status: 'healthy',
-				db: 'connected',
-				uptime: process.uptime(),
-				timestamp: new Date().toISOString(),
+				status: 'success',
+				data: {
+					health: 'healthy',
+					db: 'connected',
+					uptime: process.uptime(),
+					timestamp: new Date().toISOString(),
+				},
 			})
 		} catch (error) {
 			res.status(200).json({
-				status: 'operational',
-				db: 'disconnected',
-				mode: 'mock_data',
-				uptime: process.uptime(),
-				timestamp: new Date().toISOString(),
+				status: 'success',
+				data: {
+					health: 'operational',
+					db: 'disconnected',
+					mode: 'mock_data',
+					uptime: process.uptime(),
+					timestamp: new Date().toISOString(),
+				},
 			})
 		}
 	},
@@ -271,6 +277,29 @@ app.get(
 		} catch (error) {
 			console.warn('DB connection failed, returning mock clients')
 			res.json({ status: 'success', data: mockStore.clients })
+		}
+	},
+)
+
+app.post(
+	'/api/crm/clients/:id/interactions',
+	async (req: Request, res: Response, _next: NextFunction) => {
+		const { id } = req.params
+		const { type, notes, staffName } = req.body
+		try {
+			const interaction = await prisma.customerInteraction.create({
+				data: {
+					customerId: id,
+					type,
+					notes,
+					staffName,
+				},
+			})
+			res.status(201).json({ status: 'success', data: interaction })
+		} catch (error) {
+			res
+				.status(500)
+				.json({ status: 'error', message: 'Failed to create interaction' })
 		}
 	},
 )
