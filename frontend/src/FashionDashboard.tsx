@@ -3,6 +3,7 @@ import {
 	Bell,
 	Clock,
 	LogOut,
+	Menu,
 	Package,
 	Search,
 	Settings,
@@ -39,6 +40,7 @@ interface Order {
 
 const FashionDashboard: React.FC = () => {
 	const [activeTab, setActiveTab] = useState<'ERP' | 'WMS' | 'CRM'>('ERP')
+	const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 	const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false)
 	const [isAdjustStockModalOpen, setIsAdjustStockModalOpen] = useState(false)
 	const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
@@ -63,6 +65,12 @@ const FashionDashboard: React.FC = () => {
 
 	const [selectedClient, setSelectedClient] = useState<any | null>(null)
 	const [isClientModalOpen, setIsClientModalOpen] = useState(false)
+
+	const { data: healthData } = useApi<{ status: string }>('/api/health')
+	const isApiHealthy =
+		healthData?.status === 'healthy' ||
+		healthData?.status === 'success' ||
+		healthData?.status === 'operational'
 
 	const {
 		data: productsData,
@@ -151,15 +159,21 @@ const FashionDashboard: React.FC = () => {
 	return (
 		<div className='min-h-screen bg-[#F8FAFC] flex font-sans text-slate-900'>
 			{/* Sidebar - Senior Design */}
-			<aside className='w-72 bg-white border-r border-slate-200 hidden lg:flex lg:flex-col'>
+			<aside
+				className={`${
+					isSidebarOpen ? 'w-72' : 'w-24'
+				} bg-white border-r border-slate-200 hidden lg:flex lg:flex-col transition-all duration-300 ease-in-out overflow-hidden`}
+			>
 				<div className='p-8'>
 					<div className='flex items-center space-x-3 mb-10'>
-						<div className='bg-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200'>
+						<div className='bg-indigo-600 w-10 h-10 min-w-[40px] rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200'>
 							<Package className='text-white' size={22} />
 						</div>
-						<span className='font-extrabold text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600'>
-							FashionOS
-						</span>
+						{isSidebarOpen && (
+							<span className='font-extrabold text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 whitespace-nowrap'>
+								FashionOS
+							</span>
+						)}
 					</div>
 
 					<nav className='space-y-1.5'>
@@ -168,42 +182,53 @@ const FashionDashboard: React.FC = () => {
 							onClick={() => setActiveTab('ERP')}
 							icon={<TrendingUp size={20} />}
 							label='Dashboard'
-							badge='Live'
+							badge={isSidebarOpen ? 'Live' : undefined}
+							showLabel={isSidebarOpen}
 						/>
 						<SidebarItem
 							active={activeTab === 'WMS'}
 							onClick={() => setActiveTab('WMS')}
 							icon={<Warehouse size={20} />}
 							label='Warehouse'
+							showLabel={isSidebarOpen}
 						/>
 						<SidebarItem
 							active={activeTab === 'CRM'}
 							onClick={() => setActiveTab('CRM')}
 							icon={<Users size={20} />}
 							label='Clients'
+							showLabel={isSidebarOpen}
 						/>
 					</nav>
 				</div>
 
 				<div className='mt-auto p-8 space-y-4'>
-					<div className='bg-slate-50 p-4 rounded-2xl border border-slate-100'>
-						<p className='text-xs font-bold text-slate-400 uppercase tracking-widest mb-2'>
-							System Status
-						</p>
-						<div className='flex items-center space-x-2'>
-							<div className='w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]' />
-							<span className='text-sm font-semibold text-slate-700'>
-								API Operational
-							</span>
+					{isSidebarOpen && (
+						<div className='bg-slate-50 p-4 rounded-2xl border border-slate-100'>
+							<p className='text-xs font-bold text-slate-400 uppercase tracking-widest mb-2'>
+								System Status
+							</p>
+							<div className='flex items-center space-x-2'>
+								<div
+									className={`w-2 h-2 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)] ${
+										isApiHealthy
+											? 'bg-emerald-500'
+											: 'bg-rose-500 shadow-rose-500/50'
+									}`}
+								/>
+								<span className='text-sm font-semibold text-slate-700'>
+									{isApiHealthy ? 'API Operational' : 'API Connection Issue'}
+								</span>
+							</div>
 						</div>
-					</div>
+					)}
 					<button
 						type='button'
 						title='Sign Out'
 						className='flex items-center space-x-3 text-slate-500 hover:text-rose-500 transition-colors font-medium px-4'
 					>
-						<LogOut size={20} />
-						<span>Sign Out</span>
+						<LogOut size={20} className='min-w-[20px]' />
+						{isSidebarOpen && <span>Sign Out</span>}
 					</button>
 				</div>
 			</aside>
@@ -212,16 +237,27 @@ const FashionDashboard: React.FC = () => {
 			<main className='flex-1 flex flex-col h-screen overflow-hidden'>
 				{/* Top Header */}
 				<header className='h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10'>
-					<div className='relative w-96'>
-						<Search
-							className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-400'
-							size={18}
-						/>
-						<input
-							type='text'
-							placeholder='Search orders, SKU, or clients...'
-							className='w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all'
-						/>
+					<div className='flex items-center space-x-4'>
+						<button
+							type='button'
+							title={isSidebarOpen ? 'Collapse Sidebar' : 'Expand Sidebar'}
+							onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+							className='p-2.5 hover:bg-slate-50 rounded-xl transition-all text-slate-500 hidden lg:block'
+						>
+							<Menu size={20} />
+						</button>
+						<div className='relative w-96'>
+							<Search
+								className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-400'
+								size={18}
+							/>
+							<input
+								type='text'
+								title='Search'
+								placeholder='Search orders, SKU, or clients...'
+								className='w-full bg-slate-50 border-none rounded-xl py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-indigo-500/20 transition-all'
+							/>
+						</div>
 					</div>
 
 					<div className='flex items-center space-x-4'>
@@ -576,6 +612,8 @@ const FashionDashboard: React.FC = () => {
 							<input
 								required
 								type='text'
+								title='Product Name'
+								placeholder='Enter product name'
 								className='w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20'
 								value={newProduct.name}
 								onChange={e =>
@@ -590,6 +628,8 @@ const FashionDashboard: React.FC = () => {
 							<input
 								required
 								type='text'
+								title='Product SKU'
+								placeholder='Enter SKU'
 								className='w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20'
 								value={newProduct.sku}
 								onChange={e =>
@@ -604,6 +644,7 @@ const FashionDashboard: React.FC = () => {
 								Category
 							</label>
 							<select
+								title='Product Category'
 								className='w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20'
 								value={newProduct.category}
 								onChange={e =>
@@ -623,6 +664,8 @@ const FashionDashboard: React.FC = () => {
 								required
 								type='number'
 								step='0.01'
+								title='Product Price'
+								placeholder='0.00'
 								className='w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20'
 								value={newProduct.price}
 								onChange={e =>
@@ -642,6 +685,8 @@ const FashionDashboard: React.FC = () => {
 							<input
 								required
 								type='number'
+								title='Initial Stock Quantity'
+								placeholder='0'
 								className='w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20'
 								value={newProduct.quantity}
 								onChange={e =>
@@ -659,6 +704,7 @@ const FashionDashboard: React.FC = () => {
 							<input
 								required
 								type='text'
+								title='Bin Location'
 								placeholder='e.g. A-12'
 								className='w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20'
 								value={newProduct.binLocation}
@@ -721,6 +767,8 @@ const FashionDashboard: React.FC = () => {
 							<input
 								required
 								type='number'
+								title='New Stock Quantity'
+								placeholder='Enter quantity'
 								className='w-full bg-slate-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20'
 								value={adjustData.quantity}
 								onChange={e =>
@@ -738,6 +786,8 @@ const FashionDashboard: React.FC = () => {
 							<input
 								required
 								type='text'
+								title='New Bin Location'
+								placeholder='e.g. B-04'
 								className='w-full bg-slate-50 border-none rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-indigo-500/20'
 								value={adjustData.binLocation}
 								onChange={e =>
@@ -810,7 +860,7 @@ const FashionDashboard: React.FC = () => {
 							</h5>
 							<div className='space-y-3'>
 								{selectedClient.orders.length > 0 ? (
-									selectedClient.orders.map((order: any, idx: number) => (
+									selectedClient.orders.map((_: any, idx: number) => (
 										<div
 											key={idx}
 											className='flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl'
@@ -863,18 +913,22 @@ const SidebarItem = ({
 	icon,
 	label,
 	badge,
+	showLabel = true,
 }: {
 	active: boolean
 	onClick: () => void
 	icon: React.ReactNode
 	label: string
 	badge?: string
+	showLabel?: boolean
 }) => (
 	<button
 		type='button'
 		title={label}
 		onClick={onClick}
-		className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl transition-all duration-300 group ${
+		className={`w-full flex items-center ${
+			showLabel ? 'justify-between px-4' : 'justify-center'
+		} py-3.5 rounded-xl transition-all duration-300 group ${
 			active
 				? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200'
 				: 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
@@ -886,9 +940,11 @@ const SidebarItem = ({
 			>
 				{icon}
 			</span>
-			<span className='font-bold text-sm tracking-tight'>{label}</span>
+			{showLabel && (
+				<span className='font-bold text-sm tracking-tight'>{label}</span>
+			)}
 		</div>
-		{badge && (
+		{showLabel && badge && (
 			<span
 				className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
 					active ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'

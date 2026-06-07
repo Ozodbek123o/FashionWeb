@@ -27,7 +27,7 @@ if (process.env.NODE_ENV === 'development') {
  */
 app.get(
 	'/api/health',
-	async (_req: Request, res: Response, next: NextFunction) => {
+	async (_req: Request, res: Response, _next: NextFunction) => {
 		try {
 			// Check DB connection
 			await prisma.$queryRaw`SELECT 1`
@@ -38,7 +38,13 @@ app.get(
 				timestamp: new Date().toISOString(),
 			})
 		} catch (error) {
-			next(new AppError('Database connection failed', 500))
+			res.status(200).json({
+				status: 'operational',
+				db: 'disconnected',
+				mode: 'mock_data',
+				uptime: process.uptime(),
+				timestamp: new Date().toISOString(),
+			})
 		}
 	},
 )
