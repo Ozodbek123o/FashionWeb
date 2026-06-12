@@ -25,6 +25,7 @@ import { Modal } from './components/Modal'
 import { StatCard } from './components/StatCard'
 import { Toast, ToastType } from './components/Toast'
 import { useApi } from './hooks/useApi'
+import { buildApiUrl } from './lib/api'
 
 // Shared Types
 type OrderStatus = 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED'
@@ -124,7 +125,7 @@ const FashionDashboard: React.FC = () => {
 		if (!selectedClient) return
 		try {
 			const response = await fetch(
-				`/api/crm/clients/${selectedClient.id}/interactions`,
+				buildApiUrl(`/api/crm/clients/${selectedClient.id}/interactions`),
 				{
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
@@ -183,7 +184,7 @@ const FashionDashboard: React.FC = () => {
 	const handleAddProduct = async (e: React.FormEvent) => {
 		e.preventDefault()
 		try {
-			const response = await fetch('/api/products', {
+			const response = await fetch(buildApiUrl('/api/products'), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(newProduct),
@@ -212,7 +213,7 @@ const FashionDashboard: React.FC = () => {
 		e.preventDefault()
 		if (!selectedProduct) return
 		try {
-			const response = await fetch('/api/wms/stock-update', {
+			const response = await fetch(buildApiUrl('/api/wms/stock-update'), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

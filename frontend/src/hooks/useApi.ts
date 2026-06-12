@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { buildApiUrl } from '../lib/api'
 
 interface ApiResponse<T> {
 	status: string
@@ -10,12 +11,13 @@ export function useApi<T>(url: string) {
 	const [data, setData] = useState<T | null>(null)
 	const [loading, setLoading] = useState<boolean>(true)
 	const [error, setError] = useState<string | null>(null)
+	const requestUrl = buildApiUrl(url)
 
 	const fetchData = useCallback(async () => {
 		setLoading(true)
 		setError(null)
 		try {
-			const response = await fetch(url)
+			const response = await fetch(requestUrl)
 			const result: ApiResponse<T> = await response.json()
 
 			if (result.status === 'success') {
@@ -28,7 +30,7 @@ export function useApi<T>(url: string) {
 		} finally {
 			setLoading(false)
 		}
-	}, [url])
+	}, [requestUrl])
 
 	useEffect(() => {
 		fetchData()

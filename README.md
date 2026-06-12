@@ -45,6 +45,13 @@ npm install
 npm run dev
 ```
 
+For production or AWS deployments, create `frontend/.env.production` and point it to your backend:
+```env
+VITE_API_BASE_URL=http://YOUR_EC2_PUBLIC_IP:5000
+```
+
+If you later place the backend behind Nginx or a load balancer on the same domain, you can leave this empty and use `/api` via reverse proxy instead.
+
 ---
 
 ## 🧪 Testing & Validation (BTEC Assignment Evidence)
@@ -79,3 +86,4 @@ curl http://localhost:5000/api/wms/inventory
 - **Dynamic Port Binding:** The server uses `process.env.PORT` to bind correctly to AWS Elastic Beanstalk or Render.
 - **Security:** In production, ensure the database is in a Private Subnet and only accessible via the Backend API Security Group.
 - **WMS Efficiency:** The `binLocation` attribute in the schema allows for warehouse route optimization.
+- **Frontend/API Routing:** Vite's `server.proxy` works only in local development. On AWS, the frontend must either call the backend with `VITE_API_BASE_URL` or sit behind an Nginx reverse proxy that forwards `/api` to the backend service.
