@@ -1,48 +1,97 @@
-name: FashionWeb Production CD Deploy
+name: FashionWeb CD
 
 on:
-  push:
-    branches: ['main']
+  workflow_run:
+    workflows:
+      - FashionWeb CI
+    types:
+      - completed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    name: Deploy to AWS EC2
     runs-on: ubuntu-latest
-
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
     steps:
-      - name: Checkout repository code
-        uses: actions/checkout@v4
+      - name: Send deploy started notification
+        if: secrets.SLACK_WEBHOOK_URL != ''
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_COLOR: warning
+          SLACK_TITLE: FashionWeb CD Started
+          SLACK_MESSAGE: |
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+            Environment: production
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - name: Deploy Production to AWS EC2 via SSH
+      - name: Deploy production over SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          port: 22
+          port: ${{ secrets.SSH_PORT || 22 }}
+          fingerprint: ${{ secrets.SSH_FINGERPRINT }}
+          script_stop: true
           script: |
-            # Loyiha papkasiga kirish
-            cd ~/FashionWeb
+            set -euo pipefail
 
-            # Mahalliy o'zgarishlarni bekor qilib, GitHub'dan eng yangi kodni tortish
-            git reset --hard HEAD
-            git pull origin main
+            DEPLOY_PATH="${{ secrets.EC2_DEPLOY_PATH }}"
 
-            # 1. Backend-ni yangilash va qayta ishga tushirish
-            echo "Backend sozlanmoqda..."
-            cd backend
-            npm install --production
-            # Agar Prisma ishlatsangiz, pastdagi qatorni ochib yuborishingiz mumkin:
-            # npx prisma migrate deploy
-            pm2 restart fashion-backend || pm2 start server.js --name "fashion-backend"
+            if [ ! -d "$DEPLOY_PATH/.git" ]; then
+              git clone https://github.com/${{ github.repository }}.git "$DEPLOY_PATH"
+            fi
 
-            # 2. Frontend-ni yangilash va Build qilish
-            echo "Frontend sozlanmoqda..."
-            cd ../frontend
-            npm install
-            npm run build
+            cd "$DEPLOY_PATH"
+            git fetch --all --prune
+            git checkout main
+            git reset --hard origin/main
 
-            # Agar frontend Nginx yoki Nginx static folder orqali xizmat qarayotgan bo'lsa,
-            # build bo'lgan fayllarni Nginx papkasiga ko'chirish:
-            # sudo cp -r dist/* /var/www/fashionweb/
+            cat > backend/.env <<'EOF'
+            ${{ secrets.BACKEND_ENV_FILE }}
+            EOF
 
-            echo "🎉 Deploy jarayoni muvaffaqiyatli yakunlandi!"
+            chmod 600 backend/.env
+            chmod +x scripts/deploy-prod.sh
+            ./scripts/deploy-prod.sh "$DEPLOY_PATH"
+
+      - name: Send deploy success notification
+        if: success() && secrets.SLACK_WEBHOOK_URL != ''
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_COLOR: good
+          SLACK_TITLE: FashionWeb CD Succeeded
+          SLACK_MESSAGE: |
+            Production deploy completed successfully.
+            Environment: production
+            URL: ${{ vars.PRODUCTION_URL }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Send deploy failure notification
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_COLOR: danger
+          SLACK_TITLE: FashionWeb CD Failed
+          SLACK_MESSAGE: |
+            Production deploy failed.
+            Environment: production
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

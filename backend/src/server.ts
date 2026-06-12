@@ -2,6 +2,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import express, { NextFunction, Request, Response } from 'express'
 import { createBulkOrder } from './controllers/orderController'
+import { isOriginAllowed, parseAllowedOrigins } from './lib/cors'
 import prisma from './lib/prisma'
 import { AppError, errorHandler } from './middleware/errorHandler'
 
@@ -9,26 +10,19 @@ dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 5000
-const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || '')
-	.split(',')
-	.map(origin => origin.trim())
-	.filter(Boolean)
+const FRONTEND_ORIGINS = parseAllowedOrigins(process.env.FRONTEND_ORIGIN)
 
 // Security & Logging
 app.use(
 	cors({
 		origin: (origin, callback) => {
-			if (!origin || FRONTEND_ORIGINS.length === 0) {
-				return callback(null, true)
-			}
-
-			if (FRONTEND_ORIGINS.includes(origin)) {
+			if (isOriginAllowed(origin, FRONTEND_ORIGINS)) {
 				return callback(null, true)
 			}
 
 			return callback(new AppError(`CORS blocked for origin: ${origin}`, 403))
 		},
-	})
+	}),
 )
 app.use(express.json())
 

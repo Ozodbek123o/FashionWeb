@@ -109,6 +109,16 @@ curl http://localhost/api/health
 
 This setup serves the frontend from Nginx and forwards `/api/*` requests to the backend container automatically.
 
+## CI/CD
+
+GitHub Actions based CI/CD is configured for this repository.
+
+- CI workflow: `.github/workflows/ci.yml`
+- CD workflow: `.github/workflows/deploy.yml`
+- Security scan: `.github/workflows/codeql.yml`
+- Dependency updates: `.github/dependabot.yml`
+- Full guide: `docs/ci-cd.md`
+
 ---
 
 ## 🧪 Testing & Validation (BTEC Assignment Evidence)
