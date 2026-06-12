@@ -17,6 +17,7 @@ Create a `.env` file in the `backend/` directory and add your cloud PostgreSQL c
 DATABASE_URL="postgresql://user:password@host:port/database?sslmode=require"
 PORT=5000
 NODE_ENV=production
+FRONTEND_ORIGIN=http://localhost:3008
 ```
 
 ### 2. Backend Initialization
@@ -51,6 +52,62 @@ VITE_API_BASE_URL=http://YOUR_EC2_PUBLIC_IP:5000
 ```
 
 If you later place the backend behind Nginx or a load balancer on the same domain, you can leave this empty and use `/api` via reverse proxy instead.
+
+## AWS EC2 Production Deploy
+
+This repository now includes a production-ready Docker Compose setup:
+
+- `backend/Dockerfile`
+- `frontend/Dockerfile`
+- `frontend/nginx/default.conf`
+- `docker-compose.prod.yml`
+
+### 1. Prepare backend environment
+
+Copy the example file and update it with your real values:
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Example:
+
+```env
+DATABASE_URL="postgresql://user:password@host:5432/database?sslmode=require"
+PORT=5000
+NODE_ENV=production
+FRONTEND_ORIGIN=http://YOUR_EC2_PUBLIC_IP
+```
+
+### 2. Deploy on EC2
+
+Install Docker and Docker Compose on your instance, then run:
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+### 3. Open the required AWS Security Group ports
+
+- Allow inbound `80` for HTTP
+- Allow inbound `22` for SSH
+- You do not need to expose backend port `5000` publicly when using the included Nginx reverse proxy
+
+### 4. Verify
+
+Open:
+
+```bash
+http://YOUR_EC2_PUBLIC_IP
+```
+
+Health check from the server:
+
+```bash
+curl http://localhost/api/health
+```
+
+This setup serves the frontend from Nginx and forwards `/api/*` requests to the backend container automatically.
 
 ---
 
@@ -87,3 +144,4 @@ curl http://localhost:5000/api/wms/inventory
 - **Security:** In production, ensure the database is in a Private Subnet and only accessible via the Backend API Security Group.
 - **WMS Efficiency:** The `binLocation` attribute in the schema allows for warehouse route optimization.
 - **Frontend/API Routing:** Vite's `server.proxy` works only in local development. On AWS, the frontend must either call the backend with `VITE_API_BASE_URL` or sit behind an Nginx reverse proxy that forwards `/api` to the backend service.
+- **Container Startup:** The backend container runs `prisma migrate deploy` before starting, so production schema changes are applied automatically.

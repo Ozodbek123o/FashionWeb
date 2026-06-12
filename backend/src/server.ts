@@ -9,9 +9,27 @@ dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 5000
+const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || '')
+	.split(',')
+	.map(origin => origin.trim())
+	.filter(Boolean)
 
 // Security & Logging
-app.use(cors())
+app.use(
+	cors({
+		origin: (origin, callback) => {
+			if (!origin || FRONTEND_ORIGINS.length === 0) {
+				return callback(null, true)
+			}
+
+			if (FRONTEND_ORIGINS.includes(origin)) {
+				return callback(null, true)
+			}
+
+			return callback(new AppError(`CORS blocked for origin: ${origin}`, 403))
+		},
+	})
+)
 app.use(express.json())
 
 // Request logger for development

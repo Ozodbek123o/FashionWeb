@@ -12,8 +12,22 @@ const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
+const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || '')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean);
 // Security & Logging
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: (origin, callback) => {
+        if (!origin || FRONTEND_ORIGINS.length === 0) {
+            return callback(null, true);
+        }
+        if (FRONTEND_ORIGINS.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new errorHandler_1.AppError(`CORS blocked for origin: ${origin}`, 403));
+    },
+}));
 app.use(express_1.default.json());
 // Request logger for development
 if (process.env.NODE_ENV === 'development') {
