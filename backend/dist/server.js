@@ -7,22 +7,17 @@ const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
 const orderController_1 = require("./controllers/orderController");
+const cors_2 = require("./lib/cors");
 const prisma_1 = __importDefault(require("./lib/prisma"));
 const errorHandler_1 = require("./middleware/errorHandler");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 5000;
-const FRONTEND_ORIGINS = (process.env.FRONTEND_ORIGIN || '')
-    .split(',')
-    .map(origin => origin.trim())
-    .filter(Boolean);
+const FRONTEND_ORIGINS = (0, cors_2.parseAllowedOrigins)(process.env.FRONTEND_ORIGIN);
 // Security & Logging
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
-        if (!origin || FRONTEND_ORIGINS.length === 0) {
-            return callback(null, true);
-        }
-        if (FRONTEND_ORIGINS.includes(origin)) {
+        if ((0, cors_2.isOriginAllowed)(origin, FRONTEND_ORIGINS)) {
             return callback(null, true);
         }
         return callback(new errorHandler_1.AppError(`CORS blocked for origin: ${origin}`, 403));
