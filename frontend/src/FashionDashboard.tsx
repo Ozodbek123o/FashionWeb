@@ -315,7 +315,7 @@ const FashionDashboard: React.FC = () => {
 						</div>
 						{isSidebarOpen && (
 							<span className='font-extrabold text-2xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 whitespace-nowrap'>
-								FashionOS
+								Remodul
 							</span>
 						)}
 					</div>
